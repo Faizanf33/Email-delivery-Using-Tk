@@ -1,38 +1,62 @@
-from __future__ import print_function
 import logging
-from logging import basicConfig as bC
 import smtplib
 
-bC(format='[Mail]:[%(asctime)s]:%(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG, filename='mail.log')
+class Mail:
+    ip = 587
+    server_status = False
 
-def sendmail(sender_address, sender_pass, address, msg, sbj = "Confirmation Mail"):
-    other_address = "faizanahmad33.fa@gmail.com"
+    def __init__(self, user_id, user_pass):
+        self.start_service = self.start_service()
+        if self.start_service:
+            try:
+                server = smtplib.SMTP('smtp.gmail.com', self.ip)
+                logging.info("Starting SMTP libraries as server {} using ip {}".format(server, self.ip))
+                server.starttls()
+                server.login(user_id, user_pass)
+                logging.info("Started server using address {}".format(user_id))
+                self.server_status = True
+                self.server = server
+                self.user_id = user_id
 
-    try:
+            except Exception as exp:
+                logging.error("____INVALID-ID/PASS____")
+
+        else:
+            logging.warn("Unable to start services...")
+
+    @staticmethod
+    def start_service():
         try:
-            server = smtplib.SMTP('smtp.gmail.com', 587)
-            logging.info("Starting SMTP libraries as server {} using IP {}".format(server, 587))
+            ip = 587
+            logging.debug("Testing SMTP libraries as server '{}' using ip '{}'".format("smtp.gmail.com", ip))
+            server = smtplib.SMTP('smtp.gmail.com', ip)
             server.starttls()
-            server.login(sender_address, sender_pass)
-            logging.info("Started server using address {}".format(sender_address))
-            message = 'Subject: {}\n\n{}'.format(sbj, msg)
-            server.sendmail(sender_address, address, message)
-            logging.info("Sent mail at address {}".format(address))
-            server.quit()
-            logging.info("Server closed")
             return True
 
         except Exception as exp:
-            logging.error("While sending mail an error was raised, {}".format(exp))
-            server = smtplib.SMTP('smtp.gmail.com', 587)
-            logging.info("Starting SMTP libraries again as server {} using IP {}".format(server, 587))
-            server.starttls()
-            server.login(sender_address, sender_pass)
-            logging.info("Started server using address {}".format(sender_address))
-            server.sendmail(sender_address, other_address, str(address)+"\n"+str(msg))
-            logging.info("Sent mail at address {}".format(other_address))
-            server.quit()
-            return "____INVALID-MAIL-ADDRESS____"
-    except Exception as exp:
-        logging.error("While sending mail an error was raised, {}".format(exp))
-        return "____CONNECTION-TIMEDOUT_____"
+            logging.error("While starting server an error was raised => {}".format(exp))
+            return False
+
+
+    def sendmail(self, address, msg, sbj = "NYMUN Confirmation Mail"):
+        other_address = self.user_id
+        try:
+            try:
+                message = 'Subject: {}\n\n{}'.format(sbj, msg)
+                self.server.sendmail(self.user_id, address, message)
+                logging.info("Sent mail at address {}".format(address))
+                return True
+
+            except Exception as exc:
+                logging.error("While sending mail an error was raised => {}".format(exc))
+                message = 'Subject: {}\n\n{}'.format(sbj, msg)
+                self.server.sendmail(self.user_id, other_address, message)
+                logging.info("Sent mail at address {}".format(other_address))
+                return "____INVALID-MAIL-ADDRESS____"
+
+        except Exception as exp:
+            logging.error("While sending mail error was raised again => {}".format(exp))
+            self.server_status = False
+            self.server.quit()
+            logging.info("Server closed")
+            return "____CONNECTION-TIMEDOUT_____"
