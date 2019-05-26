@@ -1,5 +1,11 @@
+import os
 import logging
 import smtplib
+
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 class Mail:
     ip = 587
@@ -38,25 +44,34 @@ class Mail:
             return False
 
 
-    def sendmail(self, address, msg, sbj = "NYMUN Confirmation Mail"):
-        other_address = self.user_id
-        try:
-            try:
-                message = 'Subject: {}\n\n{}'.format(sbj, msg)
-                self.server.sendmail(self.user_id, address, message)
-                logging.info("Sent mail at address {}".format(address))
-                return True
+    def sendmail(self, address, sbj, msg, files):
+        logging.info("Creating an instance of MIMEMultipart as 'mail'")
+        mail = MIMEMultipart()
 
-            except Exception as exc:
-                logging.error("While sending mail an error was raised => {}".format(exc))
-                message = 'Subject: {}\n\n{}'.format(sbj, msg)
-                self.server.sendmail(self.user_id, other_address, message)
-                logging.info("Sent mail at address {}".format(other_address))
-                return "____INVALID-MAIL-ADDRESS____"
+        try:
+            logging.info("Adding subject, text and attachments to mail")
+            mail['From'] = self.user_id
+            mail['To'] = address
+            mail['Subject'] = sbj
+            mail.attach(MIMEText(msg, 'plain'))
+
+            for path in files:
+                attachment = open(path, "rb")
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload((attachment).read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', "attachment; filename= {}".format(os.path.split(path)[-1]))
+                mail.attach(part)
+
+            message = mail.as_string()
+
+            self.server.sendmail(self.user_id, address, message)
+            logging.info("Sent mail at address {}".format(address))
+            return (True, "Sent")
 
         except Exception as exp:
             logging.error("While sending mail error was raised again => {}".format(exp))
             self.server_status = False
             self.server.quit()
             logging.info("Server closed")
-            return "____CONNECTION-TIMEDOUT_____"
+            return (False, "____CONNECTION-TIMEDOUT_____")
