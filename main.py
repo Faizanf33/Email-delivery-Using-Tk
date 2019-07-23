@@ -1,5 +1,5 @@
 # -*- coding: iso-8859-1 -*-
-import logging, re, time
+import os, logging, re, time
 import threading
 
 from tkinter import (Tk, Label, Frame, Entry, Button, StringVar, PhotoImage, DISABLED, GROOVE, SUNKEN, RAISED,
@@ -108,14 +108,27 @@ def start_mail(event=None):
 
     global files
     def att_file(event=None):
-        files.append(tkfd.askopenfilename(filetypes=[("All Files", "*.*")]))
-        attLabel.configure(text="Attachments = {}".format(len(files)))
+        file = tkfd.askopenfilenames(filetypes=[("All Files", "*.*")])
+        for path in file:
+            if path not in files: files.append(path)
+        attLabel.configure(text="Attachments = {0}".format(len(files)))
 
-    attbt = ttk.Button(newframe, text="Attachment", image=imgAtt, command=att_file, width=5)
+    def display_files(event=None):
+        count = 0
+        data = ''
+        for path in files:
+            data += "{0}- {1}\n".format(files.index(path) + 1, os.path.split(path)[-1])
+        if not data: data = 'No Attachments'
+        tkmb.showinfo("Attachments = {0}".format(len(files)), data)
+
+    display_att_bt = ttk.Button(newframe, text="Attachments", command=display_files)
+    display_att_bt.place(x=150, y=220)
+
+    attbt = ttk.Button(newframe, image=imgAtt, command=att_file, width=5)
     attbt.place(x=400, y=190)
 
     attLabel = ttk.Label(newframe, text="Attachments = {}".format(len(files)), background="SkyBlue3", foreground="white", font=('times', 12))
-    attLabel.place(x=270, y=220)
+    attLabel.place(x=270, y=225)
 
     global sendBt
     sendBt = ttk.Button(newframe, image=imgSend, command=send_mail, width=20)
