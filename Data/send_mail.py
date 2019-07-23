@@ -72,6 +72,4 @@ class Mail:
         except Exception as exp:
             logging.error("While sending mail error was raised again => {}".format(exp))
             self.server_status = False
-            self.server.quit()
-            logging.info("Server closed")
             return (False, "____CONNECTION-TIMEDOUT_____")
